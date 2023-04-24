@@ -1,2 +1,1 @@
-# secint-etl-flink-job
-test Flink Job for ETL
+This is just a shell of an app that will be upgraded later
