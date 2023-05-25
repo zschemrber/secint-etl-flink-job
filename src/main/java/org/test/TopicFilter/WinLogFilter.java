@@ -1,4 +1,4 @@
-package org.atlassian.TopicFilter;
+package org.test.TopicFilter;
 
 public class WinLogFilter {
     public static boolean filter(String message) {

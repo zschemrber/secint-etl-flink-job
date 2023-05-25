@@ -1,5 +1,5 @@
 
-package org.atlassian;
+package org.test;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -14,9 +14,9 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
-import org.atlassian.Deserialization.JsonDeserialization;
-import org.atlassian.TopicFilter.WinLogFilter;
-import org.atlassian.pojo.Message;
+import org.test.pojo.Message;
+import org.test.Deserialization.JsonDeserialization;
+import org.test.TopicFilter.WinLogFilter;
 
 import java.io.IOException;
 
@@ -25,10 +25,10 @@ public class TransformationJob {
 
 	////////////////////////////////static inputs for personal lab //////////////////////////////////
 	static final String inputTopic = "zach";
-	static final String outputTopic = "output-topic";
+	static final String outputTopic = "Failed-first-filter";
 	static final String wineventTopic = "windowslogs-topic";
 	static final String jobTitle = "WinLogging";
-	static final String deadLetterTopic = "dead-letter";
+	static final String deadLetterTopic = "failing-serialization";
 
 	public TransformationJob() {
 	}
@@ -87,7 +87,7 @@ public class TransformationJob {
 			};
 			final OutputTag<String> dirtySideOutput = new OutputTag<String>("nonMatchedOutput") {
 			};
-
+			//////////// This first SideOutput is to filter strings in the logs source that are win event logs//////////
 			SingleOutputStreamOperator<String> processStream =
 					cleanLogSource.process(
 							new ProcessFunction<String, String>() {
@@ -103,24 +103,22 @@ public class TransformationJob {
 								}
 							}
 					).setParallelism(2);
-
+			///// we use the cleanDataStream below and convert it to Objects/////
 			DataStream<String> cleanDataStream = processStream.getSideOutput(cleanSideOutput);
 			DataStream<String> nonMatchedDataStream = processStream.getSideOutput(dirtySideOutput);
+			/// we used the string filtering sideOutput beccause everything I read on StackOverflow said it was faster
+			// is this the fastest way or if it is better to use NodeObject for filtering and just map after that ////
 
-			////placeholder for object mapper for json output still working out if string object for filter is the
-			// fastest way or if it is better to use Object for filtering and just map after that ////
-			//we are using the clean winlogevents data stream and now sending it to have the strings deseralized into
-			// objects  below.//
 			final OutputTag<String> deserializationErrors = new OutputTag<>("errors") {};
 
 
 					SingleOutputStreamOperator<Message> winObjectStream =
 							cleanDataStream.process(
-									new ProcessFunction<>() {    ////key value?
+									new ProcessFunction<>() {
 										public void processElement(String value, ProcessFunction<String, Message>.Context ctx, Collector<Message> out) {
 											final Message deserialized;
 											try {
-												deserialized = JsonDeserialization.deserialize(value);
+												deserialized = JsonDeserialization.deserialize(value); /// is there a way to use JsonKeyValuedeseraliser here to get a nodeobject?
 											} catch (IOException e) {
 												ctx.output(deserializationErrors, value);
 												return;
@@ -141,7 +139,6 @@ public class TransformationJob {
 			winObjectStream.sinkTo(winEventSink);
 
 			/////////////////////////////////Placeholder for logically mapping the new Object Stream //////////////////////////////
-
 
 
 		} catch (Exception sinkError) {

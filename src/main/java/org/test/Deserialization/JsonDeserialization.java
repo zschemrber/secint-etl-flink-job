@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-package org.atlassian.Deserialization;
+package org.test.Deserialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.atlassian.pojo.Message;
+import org.test.pojo.Message;
+
 
 import java.io.IOException;
 
@@ -30,8 +31,10 @@ public class JsonDeserialization {
     // JavaTimeModule is needed for Java 8 data time (Instant) support
     private static final ObjectMapper OBJECT_MAPPER =
             JsonMapper.builder().build().registerModule(new JavaTimeModule());
-
+//this deserialization uses the string from our topic filter called winlogfilter
     public static Message deserialize(String message) throws IOException {
         return OBJECT_MAPPER.readValue(message, Message.class);
+
+
     }
 }
